@@ -29,20 +29,27 @@ export function LiveMatchTimer({
   const [liveStatus, setLiveStatus] = useState(status);
   const [liveIsActive, setLiveIsActive] = useState(isTimerActive);
   const [liveHalfTime, setLiveHalfTime] = useState(halfTimeBreak);
+  const [seconds, setSeconds] = useState(0);
 
   // Format timer display
   const formatTimer = () => {
-    const totalMinutes = liveMinute + liveExtraTime;
-    
     if (liveHalfTime) {
       return "HT";
     }
-    
+
+    // Show MM:SS while match is live (including paused state)
+    if (liveStatus === 'live') {
+      const baseMinute = liveExtraTime > 0 ? `${liveMinute}+${liveExtraTime}` : `${liveMinute + liveExtraTime}`;
+      const ss = String(seconds).padStart(2, '0');
+      return `${baseMinute}:${ss}`;
+    }
+
+    // Fallback for non-live statuses
     if (liveExtraTime > 0) {
       return `${liveMinute}+${liveExtraTime}'`;
     }
-    
-    return `${totalMinutes}'`;
+
+    return `${liveMinute + liveExtraTime}'`;
   };
 
   // Get timer badge variant and color
@@ -85,6 +92,7 @@ export function LiveMatchTimer({
           setLiveStatus(newData.status || 'scheduled');
           setLiveIsActive(newData.is_timer_active || false);
           setLiveHalfTime(newData.half_time_break || false);
+          setSeconds(0);
         }
       )
       .subscribe();
@@ -94,20 +102,22 @@ export function LiveMatchTimer({
     };
   }, [matchId]);
 
-  // Auto-increment timer for live matches
+  // Per-second timer for live matches
   useEffect(() => {
     if (liveStatus === 'live' && liveIsActive && !liveHalfTime) {
       const interval = setInterval(() => {
-        setLiveMinute(prev => {
-          const newMinute = prev + 1;
-          console.log(`Timer tick: ${newMinute}+${liveExtraTime}'`);
-          return newMinute;
+        setSeconds(prev => {
+          if (prev >= 59) {
+            setLiveMinute(m => m + 1);
+            return 0;
+          }
+          return prev + 1;
         });
-      }, 60000); // Increment every minute
+      }, 1000);
 
       return () => clearInterval(interval);
     }
-  }, [liveStatus, liveIsActive, liveHalfTime, liveExtraTime]);
+  }, [liveStatus, liveIsActive, liveHalfTime]);
 
   if (liveStatus === 'scheduled') {
     return (
