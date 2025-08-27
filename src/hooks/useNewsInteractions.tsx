@@ -65,17 +65,33 @@ export const useNewsInteractions = (newsId: string | undefined) => {
   const trackView = async () => {
     if (!newsId) return;
 
-    // Check if this user/session already viewed this article recently
-    const sessionKey = `viewed_${newsId}`;
-    const lastViewed = sessionStorage.getItem(sessionKey);
-    const now = Date.now();
+    // Check if this user/session already viewed this article today
+    const sessionKey = `viewed_${newsId}_${new Date().toDateString()}`;
+    const hasViewed = sessionStorage.getItem(sessionKey);
     
-    // Only track if not viewed in last 30 minutes
-    if (lastViewed && (now - parseInt(lastViewed)) < 30 * 60 * 1000) {
+    // Only track if not viewed today
+    if (hasViewed) {
       return;
     }
 
     try {
+      // Check if user already viewed this article today in database
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data: existingView } = await supabase
+        .from('news_views')
+        .select('id')
+        .eq('news_id', newsId)
+        .gte('created_at', today.toISOString())
+        .eq('user_id', user?.id || null)
+        .maybeSingle();
+
+      if (existingView) {
+        sessionStorage.setItem(sessionKey, 'true');
+        return;
+      }
+
       await supabase
         .from('news_views')
         .insert([{
@@ -84,7 +100,7 @@ export const useNewsInteractions = (newsId: string | undefined) => {
           ip_address: 'anonymous'
         }]);
 
-      sessionStorage.setItem(sessionKey, now.toString());
+      sessionStorage.setItem(sessionKey, 'true');
       setViews(prev => prev + 1);
     } catch (error) {
       console.error('Error tracking view:', error);
