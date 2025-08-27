@@ -75,6 +75,20 @@ export const NewsManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Ensure user profile exists first
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({ 
+          user_id: user.id, 
+          full_name: user.user_metadata?.full_name || user.email 
+        }, { onConflict: 'user_id' });
+      
+      if (profileError) {
+        console.error('Error ensuring profile exists:', profileError);
+        toast.error('Error creating user profile');
+        return;
+      }
+
       const slug = formData.slug || generateSlug(formData.title);
       
       const articleData = {
