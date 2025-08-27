@@ -419,6 +419,7 @@ export type Database = {
       news: {
         Row: {
           author_id: string | null
+          category: string | null
           content: string
           created_at: string
           excerpt: string | null
@@ -432,6 +433,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          category?: string | null
           content: string
           created_at?: string
           excerpt?: string | null
@@ -445,6 +447,7 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          category?: string | null
           content?: string
           created_at?: string
           excerpt?: string | null
@@ -1158,6 +1161,7 @@ export type Database = {
       get_news_statistics: {
         Args: Record<PropertyKey, never>
         Returns: {
+          category: string
           created_at: string
           news_id: string
           title: string

@@ -273,44 +273,8 @@ export const MatchManagement = () => {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
-  useEffect(() => {
-    if (!matches.length) return;
-
-    const interval = setInterval(async () => {
-      const now = new Date().getTime();
-
-      for (const m of matches) {
-        if (m.status === "live") {
-          const kickoff = new Date(m.match_date).getTime();
-          const diffMinutes = Math.floor((now - kickoff) / (1000 * 60));
-          if (diffMinutes >= 90) {
-            try {
-              const { error } = await supabase
-                .from("matches")
-                .update({ status: "finished" })
-                .eq("id", m.id);
-
-              if (error) throw error;
-
-              setMatches((prev) =>
-                prev.map((x) =>
-                  x.id === m.id ? { ...x, status: "finished" } : x
-                )
-              );
-
-              toast.success(
-                `Pertandingan ${m.home_team} vs ${m.away_team} selesai`
-              );
-            } catch (err) {
-              console.error("Error updating match status:", err);
-            }
-          }
-        }
-      }
-    }, 60 * 1000); // cek tiap 1 menit
-
-    return () => clearInterval(interval);
-  }, [matches]);
+  // Remove auto status update effect as it conflicts with match timer system
+  // The timer is now handled by the database and edge functions
 
   useEffect(() => {
     fetchMatches();

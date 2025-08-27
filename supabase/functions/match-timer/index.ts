@@ -23,7 +23,18 @@ serve(async (req) => {
       
       console.log(`Match timer action: ${action} for match ${matchId}`, { extraMinutes });
 
-      // Call the database function to update match timer
+      // Validate required parameters
+      if (!action || !matchId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required parameters: action and matchId' }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      // Call the database function to update match timer with correct parameter order
       const { data, error } = await supabase.rpc('update_match_timer', {
         _match_id: matchId,
         _action: action,

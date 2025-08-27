@@ -472,7 +472,7 @@ export const NewsManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {newsStats.reduce((sum, stat) => sum + parseInt(stat.total_views || 0), 0)}
+                  {newsStats.reduce((sum, stat) => sum + Number(stat.total_views || 0), 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Seluruh artikel
@@ -489,7 +489,7 @@ export const NewsManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {newsStats.reduce((sum, stat) => sum + parseInt(stat.total_likes || 0), 0)}
+                  {newsStats.reduce((sum, stat) => sum + Number(stat.total_likes || 0), 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Seluruh artikel
