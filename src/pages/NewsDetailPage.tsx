@@ -2,23 +2,24 @@ import { useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, User, Share2, Heart, Copy, MessageCircle } from "lucide-react";
+import { ArrowLeft, Clock, User, Share2, Heart, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNewsInteractions } from "@/hooks/useNewsInteractions";
 
 export default function NewsDetailPage() {
   const { id } = useParams();
   const [article, setArticle] = useState(null);
+  const [relatedArticles, setRelatedArticles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isLiked, setIsLiked] = useState(false);
-  const [showSharePopup, setShowSharePopup] = useState(false);
-  const [likes, setLikes] = useState(0);
+  const { likes, views, isLiked, toggleLike, shareNative } = useNewsInteractions(id);
 
   useEffect(() => {
     if (id) {
       fetchArticle();
+      fetchRelatedArticles();
     }
   }, [id]);
 
@@ -47,7 +48,6 @@ export default function NewsDetailPage() {
       }
 
       setArticle(data);
-      setLikes(100); // Default likes count since news table doesn't have likes column
     } catch (error) {
       console.error('Error fetching article:', error);
       toast.error('Gagal memuat artikel');
@@ -55,28 +55,26 @@ export default function NewsDetailPage() {
       setLoading(false);
     }
   };
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikes(prev => isLiked ? prev - 1 : prev + 1);
-  };
 
-  const handleShare = (platform: string) => {
+  const fetchRelatedArticles = async () => {
+    try {
+      // Get other published articles, ordered by most viewed/liked
+      const { data } = await supabase
+        .rpc('get_news_statistics')
+        .neq('news_id', id)
+        .limit(3);
+
+      if (data && data.length > 0) {
+        setRelatedArticles(data);
+      }
+    } catch (error) {
+      console.error('Error fetching related articles:', error);
+    }
+  };
+  const handleShare = () => {
     const currentUrl = window.location.href;
     const title = article?.title || '';
-    switch (platform) {
-      case 'whatsapp':
-        window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + currentUrl)}`, '_blank');
-        break;
-      case 'instagram':
-        navigator.clipboard.writeText(currentUrl);
-        toast.success("Link disalin! Paste di Instagram Story atau Bio");
-        break;
-      case 'copy':
-        navigator.clipboard.writeText(currentUrl);
-        toast.success("Link berhasil disalin!");
-        break;
-    }
-    setShowSharePopup(false);
+    shareNative(title, currentUrl);
   };
 
   if (loading) {
@@ -194,50 +192,28 @@ export default function NewsDetailPage() {
                   variant="outline" 
                   size="sm" 
                   className={`gap-2 ${isLiked ? 'text-red-600 border-red-600 bg-red-50 hover:bg-red-100' : ''}`} 
-                  onClick={handleLike}
+                  onClick={toggleLike}
                 >
                   <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-600' : ''}`} />
                   {likes}
                 </Button>
-                <div className="relative">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2" 
-                    onClick={() => setShowSharePopup(!showSharePopup)}
-                  >
-                    <Share2 className="h-4 w-4" />
-                    Share
-                  </Button>
-                  
-                  {showSharePopup && (
-                    <div className="absolute top-full right-0 mt-2 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 min-w-[200px] z-50 bg-background">
-                      <div className="space-y-2">
-                        <button 
-                          onClick={() => handleShare('whatsapp')} 
-                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors"
-                        >
-                          <MessageCircle className="h-4 w-4 text-green-600" />
-                          WhatsApp
-                        </button>
-                        <button 
-                          onClick={() => handleShare('instagram')} 
-                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors"
-                        >
-                          <div className="h-4 w-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-sm"></div>
-                          Instagram
-                        </button>
-                        <button 
-                          onClick={() => handleShare('copy')} 
-                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-muted rounded-md transition-colors"
-                        >
-                          <Copy className="h-4 w-4 text-muted-foreground" />
-                          Salin Tautan
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  {views}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2" 
+                  onClick={handleShare}
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share
+                </Button>
               </div>
             </div>
           </div>
@@ -292,6 +268,42 @@ export default function NewsDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Related Articles */}
+          {relatedArticles.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4">Berita Terpopuler Lainnya</h3>
+                <div className="space-y-4">
+                  {relatedArticles.map((related) => (
+                    <Link 
+                      key={related.news_id} 
+                      to={`/news/${related.news_id}`}
+                      className="block group"
+                    >
+                      <div className="flex items-start gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-1">
+                          <h4 className="font-medium group-hover:text-primary transition-colors line-clamp-2">
+                            {related.title}
+                          </h4>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              {related.total_views}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Heart className="h-3 w-3" />
+                              {related.total_likes}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

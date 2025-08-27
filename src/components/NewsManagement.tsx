@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Newspaper, Edit, Plus, Trash2, Eye, Calendar } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Newspaper, Edit, Plus, Trash2, Eye, Calendar, Heart, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -30,6 +31,7 @@ interface NewsArticle {
 
 export const NewsManagement = () => {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [newsStats, setNewsStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
@@ -219,8 +221,22 @@ export const NewsManagement = () => {
     'link'
   ];
 
+  const fetchNewsStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_news_statistics');
+
+      if (error) throw error;
+      
+      setNewsStats(data || []);
+    } catch (error: any) {
+      console.error('Error fetching news stats:', error);
+    }
+  };
+
   useEffect(() => {
     fetchArticles();
+    fetchNewsStats();
   }, []);
 
   if (loading) {
@@ -329,97 +345,195 @@ export const NewsManagement = () => {
         </Dialog>
       </div>
 
-      <div className="space-y-4">
-        {articles.map((article) => (
-          <Card key={article.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-3 md:p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                    <h3 className="text-sm md:text-lg font-semibold">{article.title}</h3>
-                    {article.published ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 text-xs w-fit">
-                        Published
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs w-fit">
-                        Draft
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {article.excerpt && (
-                    <p className="text-muted-foreground mb-3 line-clamp-2">{article.excerpt}</p>
-                  )}
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Dibuat: {format(new Date(article.created_at), 'dd MMM yyyy', { locale: id })}
+      <Tabs defaultValue="articles" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="articles">Kelola Artikel</TabsTrigger>
+          <TabsTrigger value="statistics">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Statistik
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="articles" className="space-y-4">
+          {articles.map((article) => (
+            <Card key={article.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-3 md:p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                      <h3 className="text-sm md:text-lg font-semibold">{article.title}</h3>
+                      {article.published ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs w-fit">
+                          Published
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs w-fit">
+                          Draft
+                        </Badge>
+                      )}
                     </div>
-                    {article.published_at && (
+                    
+                    {article.excerpt && (
+                      <p className="text-muted-foreground mb-3 line-clamp-2">{article.excerpt}</p>
+                    )}
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        Diterbitkan: {format(new Date(article.published_at), 'dd MMM yyyy', { locale: id })}
+                        <Calendar className="h-3 w-3" />
+                        Dibuat: {format(new Date(article.created_at), 'dd MMM yyyy', { locale: id })}
+                      </div>
+                      {article.published_at && (
+                        <div className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          Diterbitkan: {format(new Date(article.published_at), 'dd MMM yyyy', { locale: id })}
+                        </div>
+                      )}
+                      <div>
+                        Slug: /{article.slug}
+                      </div>
+                    </div>
+
+                    {article.featured_image && (
+                      <div className="mt-3">
+                        <img 
+                          src={article.featured_image} 
+                          alt={article.title}
+                          className="w-32 h-20 object-cover rounded-md"
+                        />
                       </div>
                     )}
-                    <div>
-                      Slug: /{article.slug}
-                    </div>
                   </div>
 
-                  {article.featured_image && (
-                    <div className="mt-3">
-                      <img 
-                        src={article.featured_image} 
-                        alt={article.title}
-                        className="w-32 h-20 object-cover rounded-md"
-                      />
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(article)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => togglePublished(article.id, article.published)}
+                      className={`h-7 w-7 p-0 ${article.published ? 'text-yellow-600' : 'text-green-600'}`}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(article.id)}
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
+          ))}
 
-                <div className="flex items-center gap-1 ml-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(article)}
-                    className="h-7 w-7 p-0"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => togglePublished(article.id, article.published)}
-                    className={`h-7 w-7 p-0 ${article.published ? 'text-yellow-600' : 'text-green-600'}`}
-                  >
-                    <Eye className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(article.id)}
-                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+          {articles.length === 0 && (
+            <div className="text-center py-12">
+              <Newspaper className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Belum ada berita</h3>
+              <p className="text-muted-foreground mb-4">
+                Mulai dengan menambahkan berita pertama
+              </p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="statistics" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Artikel
+                </CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{articles.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {articles.filter(n => n.published).length} diterbitkan
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Views
+                </CardTitle>
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {newsStats.reduce((sum, stat) => sum + parseInt(stat.total_views || 0), 0)}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Seluruh artikel
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Likes
+                </CardTitle>
+                <Heart className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {newsStats.reduce((sum, stat) => sum + parseInt(stat.total_likes || 0), 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Seluruh artikel
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Artikel Terpopuler</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {newsStats.slice(0, 10).map((stat, index) => (
+                  <div key={stat.news_id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-medium line-clamp-1">{stat.title}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(stat.created_at).toLocaleDateString('id-ID')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" />
+                        {stat.total_views}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4" />
+                        {stat.total_likes}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {articles.length === 0 && (
-        <div className="text-center py-12">
-          <Newspaper className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Belum ada berita</h3>
-          <p className="text-muted-foreground mb-4">
-            Mulai dengan menambahkan berita pertama
-          </p>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -466,6 +466,51 @@ export type Database = {
           },
         ]
       }
+      news_likes: {
+        Row: {
+          created_at: string
+          id: string
+          news_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          news_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          news_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      news_views: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string | null
+          news_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          news_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          news_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           created_at: string | null
@@ -1109,6 +1154,16 @@ export type Database = {
       gen_salt: {
         Args: { "": string }
         Returns: string
+      }
+      get_news_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          news_id: string
+          title: string
+          total_likes: number
+          total_views: number
+        }[]
       }
       get_total_users: {
         Args: Record<PropertyKey, never>
