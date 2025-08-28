@@ -71,6 +71,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { 
+  DashboardDateFilter, 
+  type DateFilterValue, 
+  getDateRangeFromFilter,
+  getChartPeriodFromFilter 
+} from "@/components/DashboardDateFilter";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -78,7 +84,7 @@ const AdminDashboard = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const isMobile = useIsMobile();
-  const [selectedSeason, setSelectedSeason] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>('this_month');
   const [dashboardData, setDashboardData] = useState({
     totalUsers: 0,
     totalTicketsSold: 0,
@@ -103,16 +109,10 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Get current date and season filters
-      const currentYear = new Date().getFullYear();
-      let startDate = new Date(`${currentYear}-01-01`).toISOString();
-      let endDate = new Date(`${currentYear}-12-31`).toISOString();
-
-      if (selectedSeason !== "all") {
-        const year = parseInt(selectedSeason);
-        startDate = new Date(`${year}-01-01`).toISOString();
-        endDate = new Date(`${year}-12-31`).toISOString();
-      }
+      // Get date range from filter
+      const { startDate, endDate } = getDateRangeFromFilter(dateFilter);
+      const startDateStr = startDate.toISOString();
+      const endDateStr = endDate.toISOString();
 
       const [
         usersCount,
@@ -129,14 +129,14 @@ const AdminDashboard = () => {
           .from("ticket_orders")
           .select("quantity, total_amount, created_at")
           .eq("payment_status", "completed")
-          .gte("created_at", startDate)
-          .lt("created_at", endDate),
+          .gte("created_at", startDateStr)
+          .lt("created_at", endDateStr),
         supabase
           .from("merchandise_orders")
           .select("total_amount, created_at")
           .eq("payment_status", "completed")
-          .gte("created_at", startDate)
-          .lt("created_at", endDate),
+          .gte("created_at", startDateStr)
+          .lt("created_at", endDateStr),
         supabase
           .from("matches")
           .select("id, match_date")
@@ -150,8 +150,8 @@ const AdminDashboard = () => {
         supabase
           .from("website_visitors")
           .select("id", { count: "exact", head: true })
-          .gte("created_at", startDate)
-          .lt("created_at", endDate),
+          .gte("created_at", startDateStr)
+          .lt("created_at", endDateStr),
       ]);
 
       const totalTicketsSold =
@@ -190,8 +190,8 @@ const AdminDashboard = () => {
       await fetchChartData(
         ticketOrdersData.data || [],
         merchandiseOrdersData.data || [],
-        startDate,
-        endDate
+        startDateStr,
+        endDateStr
       );
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -207,118 +207,116 @@ const AdminDashboard = () => {
     endDate
   ) => {
     try {
-      // Determine base year for charts based on selected season
-      const now = new Date();
-      let baseYear = now.getFullYear();
+      // Get chart period configuration based on filter
+      const chartPeriod = getChartPeriodFromFilter(dateFilter);
+      const { startDate: filterStart, endDate: filterEnd } = getDateRangeFromFilter(dateFilter);
 
-      if (selectedSeason !== "all") {
-        baseYear = parseInt(selectedSeason);
-      }
+      // Generate chart data based on filter period
+      const generateChartData = (type: 'daily' | 'hourly' | 'monthly' | 'yearly', count: number) => {
+        const data = [];
+        const now = new Date();
 
-      // Generate monthly revenue data for the selected year or current year
-      const monthlyRevenue = [];
-      for (let i = 11; i >= 0; i--) {
-        const monthDate = new Date(baseYear, 11 - i, 1);
-        const monthStart = new Date(
-          monthDate.getFullYear(),
-          monthDate.getMonth(),
-          1
-        ).toISOString();
-        const monthEnd = new Date(
-          monthDate.getFullYear(),
-          monthDate.getMonth() + 1,
-          0,
-          23,
-          59,
-          59
-        ).toISOString();
+        for (let i = count - 1; i >= 0; i--) {
+          let periodStart: Date, periodEnd: Date, label: string;
 
-        const monthTicketRevenue = ticketOrders
-          .filter(
-            (order) =>
-              order.created_at >= monthStart && order.created_at <= monthEnd
-          )
-          .reduce((sum, order) => sum + Number(order.total_amount), 0);
+          switch (type) {
+            case 'hourly':
+              periodStart = new Date(filterStart.getTime() + i * 60 * 60 * 1000);
+              periodEnd = new Date(periodStart.getTime() + 60 * 60 * 1000 - 1);
+              label = periodStart.getHours().toString().padStart(2, '0') + ':00';
+              break;
+            case 'daily':
+              periodStart = new Date(filterStart.getTime() + i * 24 * 60 * 60 * 1000);
+              periodEnd = new Date(periodStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+              label = periodStart.toLocaleDateString("id-ID", { 
+                weekday: count <= 7 ? "short" : undefined,
+                day: "numeric",
+                month: count > 31 ? "short" : undefined 
+              });
+              break;
 
-        const monthMerchandiseRevenue = merchandiseOrders
-          .filter(
-            (order) =>
-              order.created_at >= monthStart && order.created_at <= monthEnd
-          )
-          .reduce((sum, order) => sum + Number(order.total_amount), 0);
+            case 'monthly':
+              periodStart = new Date(filterStart.getFullYear(), filterStart.getMonth() + i, 1);
+              periodEnd = new Date(filterStart.getFullYear(), filterStart.getMonth() + i + 1, 0, 23, 59, 59);
+              label = periodStart.toLocaleDateString("id-ID", { month: "short" });
+              break;
+            case 'yearly':
+              periodStart = new Date(filterStart.getFullYear() + i, 0, 1);
+              periodEnd = new Date(filterStart.getFullYear() + i, 11, 31, 23, 59, 59);
+              label = periodStart.getFullYear().toString();
+              break;
+            default:
+              continue;
+          }
 
-        monthlyRevenue.push({
-          month: monthDate.toLocaleDateString("id-ID", { month: "short" }),
-          tickets: monthTicketRevenue,
-          merchandise: monthMerchandiseRevenue,
-          total: monthTicketRevenue + monthMerchandiseRevenue,
-        });
-      }
-
-      // Generate ticket sales data for last 7 days (or filtered by season)
-      const ticketSalesData = [];
-      for (let i = 6; i >= 0; i--) {
-        let dayDate;
-        if (selectedSeason !== "all") {
-          // For specific seasons, show data from that year
-          dayDate = new Date(baseYear, 11, 31 - i); // December days of selected year
-        } else {
-          dayDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+          data.push({
+            period: label,
+            periodStart: periodStart.toISOString(),
+            periodEnd: periodEnd.toISOString()
+          });
         }
+        return data;
+      };
 
-        const dayStart = new Date(
-          dayDate.getFullYear(),
-          dayDate.getMonth(),
-          dayDate.getDate()
-        ).toISOString();
-        const dayEnd = new Date(
-          dayDate.getFullYear(),
-          dayDate.getMonth(),
-          dayDate.getDate(),
-          23,
-          59,
-          59
-        ).toISOString();
+      // Generate data periods
+      const periods = generateChartData(chartPeriod.type, chartPeriod.count);
 
-        const dayTickets = ticketOrders
-          .filter(
-            (order) =>
-              order.created_at >= dayStart && order.created_at <= dayEnd
+      // Monthly revenue data
+      const monthlyRevenue = periods.map(period => {
+        const periodTicketRevenue = ticketOrders
+          .filter(order => 
+            order.created_at >= period.periodStart && 
+            order.created_at <= period.periodEnd
+          )
+          .reduce((sum, order) => sum + Number(order.total_amount), 0);
+
+        const periodMerchandiseRevenue = merchandiseOrders
+          .filter(order => 
+            order.created_at >= period.periodStart && 
+            order.created_at <= period.periodEnd
+          )
+          .reduce((sum, order) => sum + Number(order.total_amount), 0);
+
+        return {
+          [chartPeriod.type === 'hourly' ? 'hour' : 
+           chartPeriod.type === 'daily' ? 'day' :
+           chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
+          tickets: periodTicketRevenue,
+          merchandise: periodMerchandiseRevenue,
+          total: periodTicketRevenue + periodMerchandiseRevenue,
+        };
+      });
+
+      // Ticket sales data  
+      const ticketSalesData = periods.map(period => {
+        const periodTickets = ticketOrders
+          .filter(order => 
+            order.created_at >= period.periodStart && 
+            order.created_at <= period.periodEnd
           )
           .reduce((sum, order) => sum + order.quantity, 0);
 
-        ticketSalesData.push({
-          day: dayDate.toLocaleDateString("id-ID", { weekday: "short" }),
-          tickets: dayTickets,
-        });
-      }
+        return {
+          [chartPeriod.type === 'hourly' ? 'hour' : 
+           chartPeriod.type === 'daily' ? 'day' :
+           chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
+          tickets: periodTickets,
+        };
+      });
 
-      // Get user registration data for the selected season
+      // Get user registration data
       const userGrowthData = [];
-      for (let i = 11; i >= 0; i--) {
-        const monthDate = new Date(baseYear, 11 - i, 1);
-        const monthStart = new Date(
-          monthDate.getFullYear(),
-          monthDate.getMonth(),
-          1
-        ).toISOString();
-        const monthEnd = new Date(
-          monthDate.getFullYear(),
-          monthDate.getMonth() + 1,
-          0,
-          23,
-          59,
-          59
-        ).toISOString();
-
+      for (const period of periods) {
         const { count } = await supabase
           .from("profiles")
           .select("id", { count: "exact", head: true })
-          .gte("created_at", monthStart)
-          .lt("created_at", monthEnd);
+          .gte("created_at", period.periodStart)
+          .lt("created_at", period.periodEnd);
 
         userGrowthData.push({
-          month: monthDate.toLocaleDateString("id-ID", { month: "short" }),
+          [chartPeriod.type === 'hourly' ? 'hour' : 
+           chartPeriod.type === 'daily' ? 'day' :
+           chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
           users: count || 0,
         });
       }
@@ -346,39 +344,19 @@ const AdminDashboard = () => {
         },
       ];
 
-      // Get website visit data filtered by season
+      // Get website visit data
       const websiteVisitsData = [];
-      for (let i = 6; i >= 0; i--) {
-        let dayDate;
-        if (selectedSeason !== "all") {
-          // For specific seasons, show data from that year
-          dayDate = new Date(baseYear, 11, 31 - i); // December days of selected year
-        } else {
-          dayDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        }
-
-        const dayStart = new Date(
-          dayDate.getFullYear(),
-          dayDate.getMonth(),
-          dayDate.getDate()
-        ).toISOString();
-        const dayEnd = new Date(
-          dayDate.getFullYear(),
-          dayDate.getMonth(),
-          dayDate.getDate(),
-          23,
-          59,
-          59
-        ).toISOString();
-
+      for (const period of periods) {
         const { count } = await supabase
           .from("website_visitors")
           .select("id", { count: "exact", head: true })
-          .gte("created_at", dayStart)
-          .lt("created_at", dayEnd);
+          .gte("created_at", period.periodStart)
+          .lt("created_at", period.periodEnd);
 
         websiteVisitsData.push({
-          day: dayDate.toLocaleDateString("id-ID", { weekday: "short" }),
+          [chartPeriod.type === 'hourly' ? 'hour' : 
+           chartPeriod.type === 'daily' ? 'day' :
+           chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
           visits: count || 0,
         });
       }
@@ -408,7 +386,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [selectedSeason]);
+  }, [dateFilter]);
 
   // Handle tab from URL params
   useEffect(() => {
@@ -419,12 +397,6 @@ const AdminDashboard = () => {
     }
   }, [location]);
 
-  const availableSeasons = [
-    { value: "all", label: "Semua Data" },
-    { value: "2024", label: "Musim 2024" },
-    { value: "2023", label: "Musim 2023" },
-    { value: "2022", label: "Musim 2022" },
-  ];
 
   const sidebarItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
@@ -481,18 +453,11 @@ const AdminDashboard = () => {
         return (
           <div className="space-y-4 sm:space-y-6">
             <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
-              <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Pilih musim" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSeasons.map((season) => (
-                    <SelectItem key={season.value} value={season.value}>
-                      {season.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <DashboardDateFilter 
+                value={dateFilter} 
+                onValueChange={setDateFilter}
+                className="w-full sm:w-auto"
+              />
             </div>
 
             {/* Main Statistics */}
@@ -640,8 +605,7 @@ const AdminDashboard = () => {
               <Card className="w-full">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-base sm:text-lg">
-                    Pendapatan Bulanan{" "}
-                    {selectedSeason !== "all" ? `(${selectedSeason})` : ""}
+                    Pendapatan - {getDateRangeFromFilter(dateFilter).label}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-2 sm:px-6">
@@ -666,7 +630,9 @@ const AdminDashboard = () => {
                         >
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis
-                            dataKey="month"
+                            dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
+                                    getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                                    getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'}
                             tick={{ fontSize: 12 }}
                             interval={isMobile ? 1 : 0}
                           />
@@ -692,8 +658,7 @@ const AdminDashboard = () => {
                 <Card>
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base sm:text-lg">
-                      Pengguna yang Daftar{" "}
-                      {selectedSeason !== "all" ? `(${selectedSeason})` : ""}
+                      Pengguna Baru - {getDateRangeFromFilter(dateFilter).label}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
@@ -718,7 +683,9 @@ const AdminDashboard = () => {
                           >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis
-                              dataKey="month"
+                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
+                                      getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                                      getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'}
                               tick={{ fontSize: 12 }}
                               interval={isMobile ? 1 : 0}
                             />
@@ -742,10 +709,7 @@ const AdminDashboard = () => {
                 <Card>
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base sm:text-lg">
-                      Pengunjung Website{" "}
-                      {selectedSeason !== "all"
-                        ? `(${selectedSeason})`
-                        : "(7 Hari)"}
+                      Pengunjung Website - {getDateRangeFromFilter(dateFilter).label}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
@@ -769,7 +733,12 @@ const AdminDashboard = () => {
                             margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                            <XAxis 
+                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
+                                      getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                                      getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'} 
+                              tick={{ fontSize: 12 }} 
+                            />
                             <YAxis tick={{ fontSize: 12 }} />
                             <ChartTooltip content={<ChartTooltipContent />} />
                             <Line
@@ -790,10 +759,7 @@ const AdminDashboard = () => {
                 <Card>
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base sm:text-lg">
-                      Penjualan Tiket{" "}
-                      {selectedSeason !== "all"
-                        ? `(${selectedSeason})`
-                        : "(7 Hari)"}
+                      Penjualan Tiket - {getDateRangeFromFilter(dateFilter).label}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
@@ -817,7 +783,12 @@ const AdminDashboard = () => {
                             margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                            <XAxis 
+                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
+                                      getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                                      getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'} 
+                              tick={{ fontSize: 12 }} 
+                            />
                             <YAxis tick={{ fontSize: 12 }} />
                             <ChartTooltip content={<ChartTooltipContent />} />
                             <Bar dataKey="tickets" fill="hsl(var(--primary))" />
@@ -832,8 +803,7 @@ const AdminDashboard = () => {
                 <Card>
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base sm:text-lg">
-                      Distribusi Penjualan{" "}
-                      {selectedSeason !== "all" ? `(${selectedSeason})` : ""}
+                      Distribusi Penjualan - {getDateRangeFromFilter(dateFilter).label}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
