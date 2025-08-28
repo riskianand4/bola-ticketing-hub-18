@@ -88,13 +88,23 @@ export function LiveMatchTimer({
         (payload) => {
           console.log('Match updated:', payload.new);
           const newData = payload.new as any;
-          
-          setLiveMinute(newData.current_minute || 0);
+
+          const isLive = (newData.status || 'scheduled') === 'live';
+          const isActive = newData.is_timer_active || false;
+          const isHT = newData.half_time_break || false;
+          let addMin = 0;
+          let sec = 0;
+          if (isLive && isActive && !isHT && newData.updated_at) {
+            const elapsed = Math.max(0, Math.floor((Date.now() - new Date(newData.updated_at).getTime()) / 1000));
+            addMin = Math.floor(elapsed / 60);
+            sec = elapsed % 60;
+          }
+          setLiveMinute((newData.current_minute || 0) + addMin);
           setLiveExtraTime(newData.extra_time || 0);
           setLiveStatus(newData.status || 'scheduled');
-          setLiveIsActive(newData.is_timer_active || false);
-          setLiveHalfTime(newData.half_time_break || false);
-          setSeconds(0);
+          setLiveIsActive(isActive);
+          setLiveHalfTime(isHT);
+          setSeconds(sec);
         }
       )
       .subscribe();
@@ -102,6 +112,38 @@ export function LiveMatchTimer({
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [matchId]);
+
+  // Initial fetch to get accurate elapsed time on refresh
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('matches')
+        .select('current_minute, extra_time, status, is_timer_active, half_time_break, updated_at')
+        .eq('id', matchId)
+        .single();
+      if (!error && data && !cancelled) {
+        const isLive = (data.status || 'scheduled') === 'live';
+        const isActive = data.is_timer_active || false;
+        const isHT = data.half_time_break || false;
+        let addMin = 0;
+        let sec = 0;
+        if (isLive && isActive && !isHT && data.updated_at) {
+          const elapsed = Math.max(0, Math.floor((Date.now() - new Date(data.updated_at).getTime()) / 1000));
+          addMin = Math.floor(elapsed / 60);
+          sec = elapsed % 60;
+        }
+        setLiveMinute((data.current_minute || 0) + addMin);
+        setLiveExtraTime(data.extra_time || 0);
+        setLiveStatus(data.status || 'scheduled');
+        setLiveIsActive(isActive);
+        setLiveHalfTime(isHT);
+        setSeconds(sec);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [matchId]);
 
   // Per-second timer for live matches
