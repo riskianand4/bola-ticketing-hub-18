@@ -247,18 +247,19 @@ export const LiveCommentaryAdmin = ({ matchId }: LiveCommentaryAdminProps) => {
     <div className="space-y-6">
       {/* Match Header */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-bold">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
+            <h3 className="font-bold text-sm sm:text-base leading-tight">
               {match.home_team} vs {match.away_team}
             </h3>
             <Badge
               variant={match.status === "live" ? "destructive" : "outline"}
+              className="text-xs"
             >
               {match.status.toUpperCase()}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {format(new Date(match.match_date), "dd MMM yyyy, HH:mm", {
               locale: id,
             })}
@@ -268,28 +269,30 @@ export const LiveCommentaryAdmin = ({ matchId }: LiveCommentaryAdminProps) => {
 
       {/* Quick Actions */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-2 flex-wrap">
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 gap-2">
             <Button
               size="sm"
               variant="outline"
               onClick={() => quickAddGoal("home")}
-              className="text-green-600"
+              className="text-green-600 text-xs sm:text-sm"
               disabled={!isMatchActive()}
             >
-              Goal {match.home_team}
+              <Target className="h-3 w-3 mr-1" />
+              <span className="truncate">{match.home_team}</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => quickAddGoal("away")}
-              className="text-green-600"
+              className="text-green-600 text-xs sm:text-sm"
               disabled={!isMatchActive()}
             >
-              Goal {match.away_team}
+              <Target className="h-3 w-3 mr-1" />
+              <span className="truncate">{match.away_team}</span>
             </Button>
           </div>
         </CardContent>
@@ -297,9 +300,9 @@ export const LiveCommentaryAdmin = ({ matchId }: LiveCommentaryAdminProps) => {
 
       {/* Event Management */}
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Kelola Komentar Langsung</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <CardTitle className="text-base sm:text-lg">Kelola Komentar Langsung</CardTitle>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button
@@ -309,118 +312,125 @@ export const LiveCommentaryAdmin = ({ matchId }: LiveCommentaryAdminProps) => {
                     setEditingEvent(null);
                   }}
                   disabled={!isMatchActive()}
+                  className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Tambah Event
+                  <span className="text-xs sm:text-sm">Tambah Event</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-sm sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>
+                  <DialogTitle className="text-base sm:text-lg">
                     {editingEvent ? "Edit Event" : "Tambah Event"}
                   </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="event_type">Jenis Event</Label>
-                    <Select
-                      value={formData.event_type}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, event_type: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {eventTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="event_type" className="text-sm">Jenis Event</Label>
+                      <Select
+                        value={formData.event_type}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, event_type: value })
+                        }
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {eventTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="event_time" className="text-sm">Menit</Label>
+                      <Input
+                        id="event_time"
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={formData.event_time}
+                        onChange={(e) =>
+                          setFormData({ ...formData, event_time: e.target.value })
+                        }
+                        placeholder="45"
+                        required
+                        className="h-9"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="team" className="text-sm">Tim</Label>
+                      <Select
+                        value={formData.team}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, team: value })
+                        }
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Pilih tim" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Tidak ada tim</SelectItem>
+                          <SelectItem value={match.home_team}>
+                            {match.home_team}
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <SelectItem value={match.away_team}>
+                            {match.away_team}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="player_name" className="text-sm">Nama Pemain (Opsional)</Label>
+                      <Input
+                        id="player_name"
+                        value={formData.player_name}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            player_name: e.target.value,
+                          })
+                        }
+                        placeholder="Nama pemain"
+                        className="h-9"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="description" className="text-sm">Deskripsi</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder="Deskripsi event..."
+                        required
+                        className="min-h-[60px] resize-none"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="event_time">Menit</Label>
-                    <Input
-                      id="event_time"
-                      type="number"
-                      min="0"
-                      max="120"
-                      value={formData.event_time}
-                      onChange={(e) =>
-                        setFormData({ ...formData, event_time: e.target.value })
-                      }
-                      placeholder="45"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="team">Tim</Label>
-                    <Select
-                      value={formData.team}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, team: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih tim (opsional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Tidak ada tim</SelectItem>
-                        <SelectItem value={match.home_team}>
-                          {match.home_team}
-                        </SelectItem>
-                        <SelectItem value={match.away_team}>
-                          {match.away_team}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="player_name">Nama Pemain (Opsional)</Label>
-                    <Input
-                      id="player_name"
-                      value={formData.player_name}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          player_name: e.target.value,
-                        })
-                      }
-                      placeholder="Nama pemain"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="description">Deskripsi</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                      placeholder="Deskripsi event..."
-                      required
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-2 pt-4">
+                  <div className="flex justify-end space-x-2 pt-3">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setIsDialogOpen(false)}
+                      size="sm"
                     >
                       Batal
                     </Button>
-                    <Button type="submit">
+                    <Button type="submit" size="sm">
                       {editingEvent ? "Perbarui" : "Simpan"}
                     </Button>
                   </div>
@@ -429,11 +439,11 @@ export const LiveCommentaryAdmin = ({ matchId }: LiveCommentaryAdminProps) => {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {events.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
+            <div className="text-center py-6">
+              <MessageSquare className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground text-sm">
                 Belum ada event untuk pertandingan ini
               </p>
             </div>
@@ -442,36 +452,38 @@ export const LiveCommentaryAdmin = ({ matchId }: LiveCommentaryAdminProps) => {
               {events.map((event) => (
                 <div
                   key={event.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-3"
                 >
-                  <div className="flex items-center gap-3">
-                    {getEventIcon(event.event_type)}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">{event.event_time}'</span>
+                  <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {getEventIcon(event.event_type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="font-bold text-sm">{event.event_time}'</span>
                         <Badge variant="outline" className="text-xs">
                           {event.event_type}
                         </Badge>
                         {event.team && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs truncate max-w-20">
                             {event.team}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm">{event.description}</p>
+                      <p className="text-sm leading-tight">{event.description}</p>
                       {event.player_name && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground mt-1">
                           Pemain: {event.player_name}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 self-end sm:self-center">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(event)}
-                      className="h-8 w-8 p-0"
+                      className="h-7 w-7 p-0"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -479,7 +491,7 @@ export const LiveCommentaryAdmin = ({ matchId }: LiveCommentaryAdminProps) => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(event.id)}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
