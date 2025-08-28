@@ -94,8 +94,10 @@ export function LiveMatchTimer({
           const isHT = newData.half_time_break || false;
           let addMin = 0;
           let sec = 0;
-          if (isLive && isActive && !isHT && newData.updated_at) {
-            const elapsed = Math.max(0, Math.floor((Date.now() - new Date(newData.updated_at).getTime()) / 1000));
+          const baseline = newData.updated_at || newData.match_started_at;
+          if (isLive && isActive && !isHT && baseline) {
+            const elapsed = Math.max(0, Math.floor((Date.now() - new Date(baseline).getTime()) / 1000));
+            console.log('Elapsed (realtime):', elapsed, 's');
             addMin = Math.floor(elapsed / 60);
             sec = elapsed % 60;
           }
@@ -120,17 +122,19 @@ export function LiveMatchTimer({
     const load = async () => {
       const { data, error } = await supabase
         .from('matches')
-        .select('current_minute, extra_time, status, is_timer_active, half_time_break, updated_at')
+        .select('current_minute, extra_time, status, is_timer_active, half_time_break, updated_at, match_started_at')
         .eq('id', matchId)
-        .single();
+        .maybeSingle();
       if (!error && data && !cancelled) {
         const isLive = (data.status || 'scheduled') === 'live';
         const isActive = data.is_timer_active || false;
         const isHT = data.half_time_break || false;
         let addMin = 0;
         let sec = 0;
-        if (isLive && isActive && !isHT && data.updated_at) {
-          const elapsed = Math.max(0, Math.floor((Date.now() - new Date(data.updated_at).getTime()) / 1000));
+        const baseline = data.updated_at || data.match_started_at;
+        if (isLive && isActive && !isHT && baseline) {
+          const elapsed = Math.max(0, Math.floor((Date.now() - new Date(baseline).getTime()) / 1000));
+          console.log('Elapsed (initial):', elapsed, 's');
           addMin = Math.floor(elapsed / 60);
           sec = elapsed % 60;
         }
