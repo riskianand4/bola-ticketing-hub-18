@@ -8,27 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Newspaper, 
-  Edit, 
-  Plus, 
-  Trash2, 
-  Eye, 
-  Calendar, 
-  Heart, 
-  BarChart3, 
-  Info,
-  TrendingUp,
-  Users
-} from 'lucide-react';
+import { Newspaper, Edit, Plus, Trash2, Eye, Calendar, Heart, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { NewsDetailDialog } from './NewsDetailDialog';
-import { NewsStatisticsDialog } from './NewsStatisticsDialog';
 
 interface NewsArticle {
   id: string;
@@ -48,9 +34,6 @@ export const NewsManagement = () => {
   const [newsStats, setNewsStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false);
-  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -374,74 +357,59 @@ export const NewsManagement = () => {
         <TabsContent value="articles" className="space-y-4">
           {articles.map((article) => (
             <Card key={article.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  {/* Left side - Image and content */}
-                  <div className="flex items-center gap-4 flex-1">
-                    {/* Featured Image */}
+              <CardContent className="p-3 md:p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                      <h3 className="text-sm md:text-lg font-semibold">{article.title}</h3>
+                      {article.published ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs w-fit">
+                          Published
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs w-fit">
+                          Draft
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {article.excerpt && (
+                      <p className="text-muted-foreground mb-3 line-clamp-2">{article.excerpt}</p>
+                    )}
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Dibuat: {format(new Date(article.created_at), 'dd MMM yyyy', { locale: id })}
+                      </div>
+                      {article.published_at && (
+                        <div className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          Diterbitkan: {format(new Date(article.published_at), 'dd MMM yyyy', { locale: id })}
+                        </div>
+                      )}
+                      <div>
+                        Slug: /{article.slug}
+                      </div>
+                    </div>
+
                     {article.featured_image && (
-                      <div className="flex-shrink-0">
+                      <div className="mt-3">
                         <img 
                           src={article.featured_image} 
                           alt={article.title}
-                          className="w-16 h-16 object-cover rounded-lg border"
+                          className="w-32 h-20 object-cover rounded-md"
                         />
                       </div>
                     )}
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-base font-semibold truncate">{article.title}</h3>
-                        {article.published ? (
-                          <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
-                            📢 Live
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-gray-100 text-gray-700 text-xs">
-                            📝 Draft
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground">
-                        {format(new Date(article.created_at), 'dd MMM yyyy', { locale: id })}
-                      </div>
-                    </div>
                   </div>
 
-                  {/* Right side - Actions */}
-                  <div className="flex items-center gap-1 ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedArticle(article);
-                        setIsDetailDialogOpen(true);
-                      }}
-                      className="h-8 w-8 p-0"
-                      title="Lihat Detail"
-                    >
-                      <Info className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedArticle(article);
-                        setIsStatsDialogOpen(true);
-                      }}
-                      className="h-8 w-8 p-0"
-                      title="Lihat Statistik"
-                    >
-                      <BarChart3 className="h-3 w-3" />
-                    </Button>
+                  <div className="flex items-center gap-1 ml-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(article)}
-                      className="h-8 w-8 p-0"
-                      title="Edit Artikel"
+                      className="h-7 w-7 p-0"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -449,8 +417,7 @@ export const NewsManagement = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => togglePublished(article.id, article.published)}
-                      className={`h-8 w-8 p-0 ${article.published ? 'text-yellow-600' : 'text-green-600'}`}
-                      title={article.published ? 'Jadikan Draft' : 'Publikasikan'}
+                      className={`h-7 w-7 p-0 ${article.published ? 'text-yellow-600' : 'text-green-600'}`}
                     >
                       <Eye className="h-3 w-3" />
                     </Button>
@@ -458,8 +425,7 @@ export const NewsManagement = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(article.id)}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      title="Hapus Artikel"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -478,20 +444,6 @@ export const NewsManagement = () => {
               </p>
             </div>
           )}
-
-          {/* Detail Dialog */}
-          <NewsDetailDialog
-            article={selectedArticle}
-            isOpen={isDetailDialogOpen}
-            onOpenChange={setIsDetailDialogOpen}
-          />
-
-          {/* Statistics Dialog */}
-          <NewsStatisticsDialog
-            article={selectedArticle}
-            isOpen={isStatsDialogOpen}
-            onOpenChange={setIsStatsDialogOpen}
-          />
         </TabsContent>
 
         <TabsContent value="statistics" className="space-y-6">
@@ -548,66 +500,35 @@ export const NewsManagement = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Statistik per Artikel</CardTitle>
+              <CardTitle>Artikel Terpopuler</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {newsStats.length > 0 ? (
-                  newsStats.map((stat, index) => (
-                    <Card key={stat.news_id || index} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm mb-2">{stat.title}</h4>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Eye className="h-3 w-3" />
-                                {stat.total_views} views
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Heart className="h-3 w-3" />
-                                {stat.total_likes} likes
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {format(new Date(stat.created_at), 'dd MMM yyyy', { locale: id })}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {stat.category || 'Berita'}
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const article = articles.find(a => a.id === stat.news_id);
-                                if (article) {
-                                  setSelectedArticle(article);
-                                  setIsStatsDialogOpen(true);
-                                }
-                              }}
-                              className="h-7 px-2"
-                            >
-                              <BarChart3 className="h-3 w-3 mr-1" />
-                              Detail
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center py-12">
-                    <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Belum ada statistik</h3>
-                    <p className="text-muted-foreground">
-                      Statistik akan muncul setelah artikel mulai mendapat interaksi
-                    </p>
+                {newsStats.slice(0, 10).map((stat, index) => (
+                  <div key={stat.news_id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-medium line-clamp-1">{stat.title}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(stat.created_at).toLocaleDateString('id-ID')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" />
+                        {stat.total_views}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4" />
+                        {stat.total_likes}
+                      </div>
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
             </CardContent>
           </Card>
