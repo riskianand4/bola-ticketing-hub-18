@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { LiveMatchTimer } from './LiveMatchTimer';
 
 interface LiveMatchControlProps {
   match: {
@@ -88,7 +89,17 @@ export function LiveMatchControl({ match, onUpdate }: LiveMatchControlProps) {
           <div>
             <Label className="text-xs text-muted-foreground">Waktu</Label>
             <div className="text-sm font-mono font-bold">
-              {isHalfTime ? "HT" : `${totalMinutes}'`}
+              <LiveMatchTimer
+                matchId={match.id}
+                status={match.status}
+                currentMinute={match.current_minute || 0}
+                extraTime={match.extra_time || 0}
+                isTimerActive={!!match.is_timer_active}
+                halfTimeBreak={!!match.half_time_break}
+                homeTeam={match.home_team}
+                awayTeam={match.away_team}
+                variant="compact"
+              />
             </div>
           </div>
         </div>
