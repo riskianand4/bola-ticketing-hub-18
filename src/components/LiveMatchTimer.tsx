@@ -12,6 +12,7 @@ interface LiveMatchTimerProps {
   halfTimeBreak?: boolean;
   homeTeam: string;
   awayTeam: string;
+  variant?: 'full' | 'compact';
 }
 
 export function LiveMatchTimer({
@@ -22,7 +23,8 @@ export function LiveMatchTimer({
   isTimerActive = false,
   halfTimeBreak = false,
   homeTeam,
-  awayTeam
+  awayTeam,
+  variant = 'full'
 }: LiveMatchTimerProps) {
   const [liveMinute, setLiveMinute] = useState(currentMinute);
   const [liveExtraTime, setLiveExtraTime] = useState(extraTime);
@@ -118,6 +120,15 @@ export function LiveMatchTimer({
       return () => clearInterval(interval);
     }
   }, [liveStatus, liveIsActive, liveHalfTime]);
+
+  // Compact variant - just return the timer text
+  if (variant === 'compact') {
+    return (
+      <span className="text-xs text-gray-400 font-mono">
+        {formatTimer()}
+      </span>
+    );
+  }
 
   if (liveStatus === 'scheduled') {
     return (

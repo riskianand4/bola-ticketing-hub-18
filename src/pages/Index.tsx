@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { HeroSlider } from "@/components/HeroSlider";
+import { LiveMatchTimer } from "@/components/LiveMatchTimer";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -253,15 +254,23 @@ export default function Index() {
                               {match.away_score ?? 0}
                             </span>
                           </div>
-                           <span className="text-xs text-gray-400 mt-1">
-                             {match.status === "live"
-                               ? match.half_time_break 
-                                 ? "HT" 
-                                 : `${(match.current_minute || 0) + (match.extra_time || 0)}'`
-                               : new Date(match.match_date).toLocaleDateString(
-                                   "id-ID"
-                                 )}
-                           </span>
+                           <div className="text-xs text-gray-400 mt-1">
+                              {match.status === "live" ? (
+                                <LiveMatchTimer
+                                  matchId={match.id}
+                                  status={match.status}
+                                  currentMinute={match.current_minute || 0}
+                                  extraTime={match.extra_time || 0}
+                                  isTimerActive={match.is_timer_active || false}
+                                  halfTimeBreak={match.half_time_break || false}
+                                  homeTeam={match.home_team}
+                                  awayTeam={match.away_team}
+                                  variant="compact"
+                                />
+                              ) : (
+                                new Date(match.match_date).toLocaleDateString("id-ID")
+                              )}
+                            </div>
                         </div>
 
                         {/* Away Team */}
