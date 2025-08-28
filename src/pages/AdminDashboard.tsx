@@ -212,7 +212,7 @@ const AdminDashboard = () => {
       const { startDate: filterStart, endDate: filterEnd } = getDateRangeFromFilter(dateFilter);
 
       // Generate chart data based on filter period
-      const generateChartData = (type: 'daily' | 'hourly' | 'monthly' | 'yearly', count: number) => {
+      const generateChartData = (type: 'daily' | 'monthly' | 'yearly', count: number) => {
         const data = [];
         const now = new Date();
 
@@ -220,18 +220,12 @@ const AdminDashboard = () => {
           let periodStart: Date, periodEnd: Date, label: string;
 
           switch (type) {
-            case 'hourly':
-              periodStart = new Date(filterStart.getTime() + i * 60 * 60 * 1000);
-              periodEnd = new Date(periodStart.getTime() + 60 * 60 * 1000 - 1);
-              label = periodStart.getHours().toString().padStart(2, '0') + ':00';
-              break;
             case 'daily':
               periodStart = new Date(filterStart.getTime() + i * 24 * 60 * 60 * 1000);
               periodEnd = new Date(periodStart.getTime() + 24 * 60 * 60 * 1000 - 1);
               label = periodStart.toLocaleDateString("id-ID", { 
-                weekday: count <= 7 ? "short" : undefined,
                 day: "numeric",
-                month: count > 31 ? "short" : undefined 
+                month: "short" 
               });
               break;
 
@@ -278,8 +272,7 @@ const AdminDashboard = () => {
           .reduce((sum, order) => sum + Number(order.total_amount), 0);
 
         return {
-          [chartPeriod.type === 'hourly' ? 'hour' : 
-           chartPeriod.type === 'daily' ? 'day' :
+          [chartPeriod.type === 'daily' ? 'day' :
            chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
           tickets: periodTicketRevenue,
           merchandise: periodMerchandiseRevenue,
@@ -297,8 +290,7 @@ const AdminDashboard = () => {
           .reduce((sum, order) => sum + order.quantity, 0);
 
         return {
-          [chartPeriod.type === 'hourly' ? 'hour' : 
-           chartPeriod.type === 'daily' ? 'day' :
+          [chartPeriod.type === 'daily' ? 'day' :
            chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
           tickets: periodTickets,
         };
@@ -314,8 +306,7 @@ const AdminDashboard = () => {
           .lt("created_at", period.periodEnd);
 
         userGrowthData.push({
-          [chartPeriod.type === 'hourly' ? 'hour' : 
-           chartPeriod.type === 'daily' ? 'day' :
+          [chartPeriod.type === 'daily' ? 'day' :
            chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
           users: count || 0,
         });
@@ -354,8 +345,7 @@ const AdminDashboard = () => {
           .lt("created_at", period.periodEnd);
 
         websiteVisitsData.push({
-          [chartPeriod.type === 'hourly' ? 'hour' : 
-           chartPeriod.type === 'daily' ? 'day' :
+          [chartPeriod.type === 'daily' ? 'day' :
            chartPeriod.type === 'monthly' ? 'month' : 'year']: period.period,
           visits: count || 0,
         });
@@ -629,13 +619,12 @@ const AdminDashboard = () => {
                           margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
-                                    getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
-                                    getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'}
-                            tick={{ fontSize: 12 }}
-                            interval={isMobile ? 1 : 0}
-                          />
+                            <XAxis
+                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                                      getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'}
+                              tick={{ fontSize: 12 }}
+                              interval={isMobile ? 1 : 0}
+                            />
                           <YAxis tick={{ fontSize: 12 }} />
                           <ChartTooltip content={<ChartTooltipContent />} />
                           <Area
@@ -682,13 +671,12 @@ const AdminDashboard = () => {
                             margin={{ top: 5, right: 10, left: 10, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
-                                      getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
-                                      getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'}
-                              tick={{ fontSize: 12 }}
-                              interval={isMobile ? 1 : 0}
-                            />
+                          <XAxis
+                            dataKey={getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                                    getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'}
+                            tick={{ fontSize: 12 }}
+                            interval={isMobile ? 1 : 0}
+                          />
                             <YAxis tick={{ fontSize: 12 }} />
                             <ChartTooltip content={<ChartTooltipContent />} />
                             <Line
@@ -734,8 +722,7 @@ const AdminDashboard = () => {
                           >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis 
-                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
-                                      getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
                                       getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'} 
                               tick={{ fontSize: 12 }} 
                             />
@@ -784,8 +771,7 @@ const AdminDashboard = () => {
                           >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis 
-                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'hourly' ? 'hour' : 
-                                      getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
+                              dataKey={getChartPeriodFromFilter(dateFilter).type === 'daily' ? 'day' :
                                       getChartPeriodFromFilter(dateFilter).type === 'monthly' ? 'month' : 'year'} 
                               tick={{ fontSize: 12 }} 
                             />

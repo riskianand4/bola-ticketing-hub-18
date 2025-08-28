@@ -6,13 +6,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarDays, TrendingUp } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 export type DateFilterValue = 
-  | 'today' 
-  | 'yesterday' 
-  | 'this_week' 
-  | 'last_week' 
   | 'this_month' 
   | 'last_month' 
   | 'this_year' 
@@ -31,34 +27,27 @@ export const DashboardDateFilter = ({
   className 
 }: DashboardDateFilterProps) => {
   const filterOptions = [
-    { value: 'today', label: '📅 Hari Ini', icon: '📅' },
-    { value: 'yesterday', label: '📆 Kemarin', icon: '📆' },
-    { value: 'this_week', label: '📊 Minggu Ini', icon: '📊' },
-    { value: 'last_week', label: '📈 Minggu Lalu', icon: '📈' },
-    { value: 'this_month', label: '📋 Bulan Ini', icon: '📋' },
-    { value: 'last_month', label: '📉 Bulan Lalu', icon: '📉' },
-    { value: 'this_year', label: '📊 Tahun Ini', icon: '📊' },
-    { value: 'last_year', label: '📈 Tahun Lalu', icon: '📈' },
-    { value: 'all_time', label: '🕐 Semua Waktu', icon: '🕐' },
+    { value: 'this_month', label: 'Bulan Ini' },
+    { value: 'last_month', label: 'Bulan Lalu' },
+    { value: 'this_year', label: 'Tahun Ini' },
+    { value: 'last_year', label: 'Tahun Lalu' },
+    { value: 'all_time', label: 'Semua Data' },
   ];
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <TrendingUp className="h-4 w-4" />
-        <span className="hidden sm:inline">Filter Periode:</span>
+        <Calendar className="h-4 w-4" />
+        <span className="hidden sm:inline">Periode:</span>
       </div>
       <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="w-full sm:w-48">
+        <SelectTrigger className="w-full sm:w-40">
           <SelectValue placeholder="Pilih periode" />
         </SelectTrigger>
         <SelectContent>
           {filterOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              <div className="flex items-center gap-2">
-                <span>{option.icon}</span>
-                <span>{option.label.replace(/[📅📆📊📈📋📉🕐]\s/, '')}</span>
-              </div>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -73,45 +62,6 @@ export const getDateRangeFromFilter = (filter: DateFilterValue) => {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   switch (filter) {
-    case 'today':
-      return {
-        startDate: new Date(today),
-        endDate: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
-        label: 'Hari Ini'
-      };
-      
-    case 'yesterday':
-      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-      return {
-        startDate: yesterday,
-        endDate: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1),
-        label: 'Kemarin'
-      };
-      
-    case 'this_week':
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-      return {
-        startDate: startOfWeek,
-        endDate: endOfWeek,
-        label: 'Minggu Ini'
-      };
-      
-    case 'last_week':
-      const lastWeekStart = new Date(today);
-      lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
-      const lastWeekEnd = new Date(lastWeekStart);
-      lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
-      lastWeekEnd.setHours(23, 59, 59, 999);
-      return {
-        startDate: lastWeekStart,
-        endDate: lastWeekEnd,
-        label: 'Minggu Lalu'
-      };
-      
     case 'this_month':
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -157,7 +107,7 @@ export const getDateRangeFromFilter = (filter: DateFilterValue) => {
       return {
         startDate: new Date('2020-01-01'), // Far back date
         endDate: new Date(),
-        label: 'Semua Waktu'
+        label: 'Semua Data'
       };
   }
 };
@@ -165,20 +115,6 @@ export const getDateRangeFromFilter = (filter: DateFilterValue) => {
 // Helper function to format period for chart data
 export const getChartPeriodFromFilter = (filter: DateFilterValue) => {
   switch (filter) {
-    case 'today':
-    case 'yesterday':
-      return { 
-        type: 'hourly' as const, 
-        count: 24, 
-        unit: 'hour' as const 
-      };
-    case 'this_week':
-    case 'last_week':
-      return { 
-        type: 'daily' as const, 
-        count: 7, 
-        unit: 'day' as const 
-      };
     case 'this_month':
     case 'last_month':
       return { 
